@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  /* Official EPL Colors */
+  --color-primary: rgb(56 0 60);           /* EPL Dark Purple #38003c */
+  --color-secondary: rgb(233 0 82);        /* EPL Pink #e90052 */
+  --color-accent: rgb(4 245 255);          /* EPL Cyan #04f5ff */
+  
+  /* EPL Extended Palette */
+  --color-epl-cyan: 4 245 255;        /* EPL Cyan #04f5ff */
+  --color-epl-pink: 233 0 82;         /* EPL Pink #e90052 */
+  --color-epl-green: 0 255 133;       /* EPL Green #00ff85 */
+  --color-epl-purple: 56 0 60;        /* EPL Purple #38003c */
+  --color-epl-white: 255 255 255;     /* EPL White #ffffff */
+  
+  /* Base System Colors */
+  --color-background: rgb(255 255 255);    /* White */
+  --color-foreground: rgb(56 0 60);        /* EPL Dark Purple */
+  --color-muted: rgb(248 250 252);         /* Very light gray */
+  --color-muted-foreground: rgb(100 116 139); /* Medium gray */
+  --color-card: rgb(255 255 255);          /* White */
+  --color-card-foreground: rgb(56 0 60);   /* EPL Dark Purple */
+  --color-popover: rgb(255 255 255);       /* White */
+  --color-popover-foreground: rgb(56 0 60); /* EPL Dark Purple */
+  --color-border: rgb(226 232 240);        /* Light border */
+  --color-input: rgb(241 245 249);         /* Light input */
+  --color-ring: rgb(56 0 60);              /* EPL Purple for focus rings */
+  --color-destructive: rgb(233 0 82);      /* EPL Pink for errors */
+  --color-destructive-foreground: rgb(255 255 255); /* White text */
+  
+  /* Success and Info Colors */
+  --color-success: rgb(0 255 133);         /* EPL Green #00ff85 */
+  --color-success-foreground: rgb(56 0 60); /* EPL Purple text */
+  --color-info: rgb(4 245 255);            /* EPL Cyan #04f5ff */
+  --color-info-foreground: rgb(56 0 60);   /* EPL Purple text */
+  --color-warning: rgb(245 158 11);        /* Amber #f59e0b */
+  --color-warning-foreground: rgb(56 0 60); /* EPL Purple text */
+}
+
+/* Force EPL light theme regardless of system preference */
+
+/* Typography Scale for EPL Branding */
+@layer base {
+  :root {
+    /* Font families */
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    
+    /* Typography scale */
+    --text-xs: 0.75rem;      /* 12px */
+    --text-sm: 0.875rem;     /* 14px */
+    --text-base: 1rem;       /* 16px */
+    --text-lg: 1.125rem;     /* 18px */
+    --text-xl: 1.25rem;      /* 20px */
+    --text-2xl: 1.5rem;      /* 24px */
+    --text-3xl: 1.875rem;    /* 30px */
+    --text-4xl: 2.25rem;     /* 36px */
+    --text-5xl: 3rem;        /* 48px */
+    
+    /* Line heights */
+    --leading-tight: 1.25;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+    
+    /* Letter spacing */
+    --tracking-tight: -0.025em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.025em;
+  }
+  
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: light;
+  }
+  
+  body {
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-foreground));
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
