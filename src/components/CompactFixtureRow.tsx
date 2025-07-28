@@ -60,14 +60,14 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
     return (
       <img 
         src={logoPath}
-        alt={`${teamFullName} crest`}
+        alt={`${teamFullName} team crest`}
         className="w-6 h-6 object-contain"
         onError={(e) => {
           // Fallback to colored circle if image fails to load
           const target = e.target as HTMLImageElement
           const parent = target.parentElement
           if (parent) {
-            parent.innerHTML = `<div class="${cn('w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white', colors[teamShortName] || 'bg-gray-500')}">${teamShortName.slice(0, 2)}</div>`
+            parent.innerHTML = `<div class="${cn('w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white', colors[teamShortName] || 'bg-gray-500')}" aria-label="${teamFullName} team badge">${teamShortName.slice(0, 2)}</div>`
           }
         }}
       />
@@ -91,17 +91,23 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
     return `${fixture.team_h_score}-${fixture.team_a_score}`
   }
 
-  const isLive = fixture.match_status.status === 'live'
-  const isFinished = fixture.match_status.status === 'finished'
-  const isPostponed = fixture.match_status.status === 'postponed'
-  const isPast = new Date(fixture.kickoff_time) < new Date()
-  const hasScores = fixture.team_h_score !== null && fixture.team_a_score !== null
+  // Remove unused variables that were causing ESLint errors
+
+  const statusText = fixture.match_status.status === 'live' ? 'Live match' : 
+                     fixture.match_status.status === 'finished' ? 'Full time' : 
+                     fixture.match_status.status === 'postponed' ? 'Postponed' : ''
+
+  const matchDescription = getScore() 
+    ? `${fixture.team_h_name} ${getScore()} ${fixture.team_a_name} - ${statusText}`
+    : `${fixture.team_h_name} vs ${fixture.team_a_name} at ${kickoffTime}${statusText ? ` - ${statusText}` : ''}`
 
   return (
     <div 
       className={cn(
         'flex items-center py-4 px-4 border-b border-border/20 last:border-b-0 transition-colors'
       )}
+      role="group"
+      aria-label={matchDescription}
     >
       {/* Home Team */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -119,13 +125,20 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
       {/* Center Score/Time */}
       <div className="flex flex-col items-center gap-1 px-4 min-w-0 relative">
         {getScore() ? (
-          <span className="text-lg font-bold text-foreground">
+          <span 
+            className="text-lg font-bold text-foreground"
+            aria-label={`Score: ${fixture.team_h_name} ${fixture.team_h_score}, ${fixture.team_a_name} ${fixture.team_a_score}`}
+          >
             {getScore()}
           </span>
         ) : (
-          <div className="text-sm text-muted-foreground">
+          <time 
+            className="text-sm text-muted-foreground"
+            dateTime={fixture.kickoff_time}
+            aria-label={`Kickoff time: ${kickoffTime}`}
+          >
             {kickoffTime}
-          </div>
+          </time>
         )}
         {fixture.match_status.status !== 'scheduled' && (
           <div className={cn(
@@ -133,7 +146,9 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
             fixture.match_status.status === 'finished' ? 
               "absolute top-[80%] left-0 w-full text-center" : 
               "text-info"
-          )}>
+          )}
+          aria-label={statusText}
+          >
             {fixture.match_status.status === 'live' ? 'LIVE' : 
              fixture.match_status.status === 'finished' ? 'FT' : 
              fixture.match_status.status === 'postponed' ? 'PP' : ''}

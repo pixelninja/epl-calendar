@@ -4,7 +4,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { MapPin, X, Check, ChevronsUpDown } from '@/components/icons'
+import { X, Check, ChevronsUpDown } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 interface TimezoneModalProps {
@@ -119,7 +119,7 @@ export function TimezoneModal({
       // First try geolocation for more accurate timezone detection
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
+          () => {
             // Use the browser's timezone as fallback since geolocation doesn't directly give timezone
             const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
             setSelectedTimezone(detectedTimezone)
@@ -140,7 +140,7 @@ export function TimezoneModal({
         setSelectedTimezone(detectedTimezone)
         setOpen(false) // Close the popover
       }
-    } catch (error) {
+    } catch {
       // Final fallback
       const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
       setSelectedTimezone(detectedTimezone)

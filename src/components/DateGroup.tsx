@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from '@/components/icons'
+import { ChevronRight } from '@/components/icons'
 import { CompactFixtureRow } from './CompactFixtureRow'
 import { cn } from '@/lib/utils'
 import type { ProcessedFixture } from '@/types/api'
@@ -58,11 +58,10 @@ export function DateGroup({
     })
   }
 
-  const hasLiveFixtures = fixtures.some(f => f.match_status.status === 'live')
   const allFinished = fixtures.every(f => f.match_status.status === 'finished')
 
   return (
-    <div className={cn(
+    <section className={cn(
       'border-b border-border/30',
       {
         'bg-white': isEvenRow,
@@ -80,9 +79,12 @@ export function DateGroup({
             'hover:bg-muted/30': !isPast
           }
         )}
+        aria-expanded={isExpanded}
+        aria-controls={`fixtures-${date}`}
+        aria-label={`${formatDateHeader(date)} fixtures, ${fixtures.length} matches`}
       >
         <div className="flex items-center gap-3">
-          <div className={cn(
+          <h3 className={cn(
             'text-base font-semibold',
             {
               'text-primary': isToday && !isPast,
@@ -91,7 +93,7 @@ export function DateGroup({
             }
           )}>
             {formatDateHeader(date)}
-          </div>
+          </h3>
         </div>
         
         <div className="flex items-center gap-2">
@@ -102,10 +104,15 @@ export function DateGroup({
         </div>
       </button>
 
-      <div className={cn(
-        "overflow-hidden transition-all duration-300 ease-in-out",
-        isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
-      )}>
+      <div 
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out",
+          isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+        )}
+        id={`fixtures-${date}`}
+        role="region"
+        aria-labelledby={`date-${date}`}
+      >
         <div className={cn(
           'bg-background',
           {
@@ -115,17 +122,18 @@ export function DateGroup({
           {fixtures
             .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime())
             .map(fixture => (
-              <CompactFixtureRow
-                key={fixture.id}
-                fixture={fixture}
-                showScores={showScores}
-                timezone={timezone}
-                timeFormat={timeFormat}
-                isNextFixture={fixture.id === nextFixtureId}
-              />
+              <article key={fixture.id}>
+                <CompactFixtureRow
+                  fixture={fixture}
+                  showScores={showScores}
+                  timezone={timezone}
+                  timeFormat={timeFormat}
+                  isNextFixture={fixture.id === nextFixtureId}
+                />
+              </article>
             ))}
         </div>
       </div>
-    </div>
+    </section>
   )
 }
