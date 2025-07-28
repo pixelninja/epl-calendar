@@ -79,7 +79,7 @@ export function NotificationToggle({ enabled, onToggle, className }: Notificatio
         id="notification-toggle"
         checked={enabled && permission === 'granted'}
         onCheckedChange={handleToggle}
-        disabled={permission === 'denied'}
+        disabled={permission !== 'granted'}
         className="data-[state=checked]:bg-primary"
       />
       

@@ -5,13 +5,18 @@ const FPL_BASE_URL = '/api' // Use Vercel API routes in production
 const USE_LOCAL_DATA = import.meta.env.DEV // Use local data in dev, try API in prod
 
 export class FPLApiError extends Error {
+  public status?: number
+  public endpoint?: string
+  
   constructor(
     message: string,
-    public status?: number,
-    public endpoint?: string
+    status?: number,
+    endpoint?: string
   ) {
     super(message)
     this.name = 'FPLApiError'
+    this.status = status
+    this.endpoint = endpoint
   }
 }
 
@@ -67,7 +72,7 @@ class FPLApiService {
   private getCachedData<T>(key: string): T | null {
     const cached = this.cache.get(key)
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data
+      return cached.data as T
     }
     return null
   }

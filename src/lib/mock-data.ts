@@ -3,7 +3,11 @@ import bootstrapData from './data-bootstrap.json'
 import fixturesData from './data-fixtures.json'
 
 export const realTeams: Team[] = bootstrapData.teams
-export const realFixtures: Fixture[] = fixturesData
+export const realFixtures: Fixture[] = fixturesData.map(fixture => ({
+  ...fixture,
+  team_a_score: typeof fixture.team_a_score === 'string' ? parseInt(fixture.team_a_score, 10) : fixture.team_a_score,
+  team_h_score: typeof fixture.team_h_score === 'string' ? parseInt(fixture.team_h_score, 10) : fixture.team_h_score,
+}))
 
 export function generateRealFixtures(): ProcessedFixture[] {
   const teamMap = new Map(realTeams.map(team => [team.id, team]))
@@ -69,11 +73,11 @@ export function generateRealFixtures(): ProcessedFixture[] {
         hour: '2-digit',
         minute: '2-digit'
       }),
-      matchweek: fixture.event
+      matchweek: fixture.event || 0
     }
   }).sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime())
   
   return processedFixtures
 }
 
-export const realBootstrapStatic: BootstrapStatic = bootstrapData as BootstrapStatic
+export const realBootstrapStatic: BootstrapStatic = bootstrapData as unknown as BootstrapStatic

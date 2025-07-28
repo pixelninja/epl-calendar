@@ -10,7 +10,7 @@ export const queryClient = new QueryClient({
         // Don't retry on 4xx errors
         if (error instanceof Error && 'status' in error) {
           const status = (error as { status?: number }).status
-          if (status >= 400 && status < 500) {
+          if (status && status >= 400 && status < 500) {
             return false
           }
         }
