@@ -26,7 +26,7 @@ export function getUserTimezone(): string {
 }
 
 // Convert UTC date to specified timezone
-export function convertToTimezone(utcDate: string | Date, timezone: string): Date {
+export function convertToTimezone(utcDate: string | Date): Date {
   const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
   
   if (isNaN(date.getTime())) {

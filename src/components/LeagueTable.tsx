@@ -106,7 +106,7 @@ export function LeagueTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {teams.map((team, index) => {
+              {teams.map((team) => {
                 const trend = getPositionTrend(team)
                 const isHighlighted = highlightedTeams.includes(team.team.id)
                 

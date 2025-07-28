@@ -70,7 +70,7 @@ export function useNotifications(): UseNotificationsReturn {
         setTimeout(() => {
           try {
             notification.close()
-          } catch (e) {
+          } catch {
             // Notification might already be closed
           }
         }, 5000)

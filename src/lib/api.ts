@@ -16,7 +16,7 @@ export class FPLApiError extends Error {
 }
 
 class FPLApiService {
-  private cache = new Map<string, { data: any; timestamp: number }>()
+  private cache = new Map<string, { data: unknown; timestamp: number }>()
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
   private async fetchWithRetry<T>(
