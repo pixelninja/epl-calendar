@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { X, Check, ChevronsUpDown } from '@/components/icons'
+import { useTimezoneDetection } from '@/hooks/useTimezoneDetection'
 import { cn } from '@/lib/utils'
 
 interface TimezoneModalProps {
@@ -113,39 +114,21 @@ export function TimezoneModal({
   const [selectedTimeFormat, setSelectedTimeFormat] = useState(timeFormat)
   const [selectedHidePrevious, setSelectedHidePrevious] = useState(hidePreviousFixtures)
   const [open, setOpen] = useState(false)
+  
+  const { detect, result, clearResult } = useTimezoneDetection()
+
+  // Handle timezone detection result
+  useEffect(() => {
+    if (result.detectedTimezone && !result.isDetecting && !result.error) {
+      setSelectedTimezone(result.detectedTimezone)
+      onTimezoneChange(result.detectedTimezone)
+      setOpen(false)
+      clearResult()
+    }
+  }, [result, onTimezoneChange, clearResult])
 
   const handleAutoDetect = async () => {
-    try {
-      // First try geolocation for more accurate timezone detection
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          () => {
-            // Use the browser's timezone as fallback since geolocation doesn't directly give timezone
-            const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-            setSelectedTimezone(detectedTimezone)
-            onTimezoneChange(detectedTimezone)
-            setOpen(false) // Close the popover
-          },
-          () => {
-            // If geolocation fails, just use browser timezone
-            const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-            setSelectedTimezone(detectedTimezone)
-            onTimezoneChange(detectedTimezone)
-            setOpen(false) // Close the popover
-          }
-        )
-      } else {
-        // Fallback to browser timezone
-        const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-        setSelectedTimezone(detectedTimezone)
-        setOpen(false) // Close the popover
-      }
-    } catch {
-      // Final fallback
-      const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      setSelectedTimezone(detectedTimezone)
-      setOpen(false) // Close the popover
-    }
+    await detect()
   }
 
   const handleSave = () => {
@@ -197,11 +180,20 @@ export function TimezoneModal({
               <Label className="text-lg font-medium text-foreground">Timezone</Label>
               <button
                 onClick={handleAutoDetect}
-                className="text-xs text-primary underline hover:no-underline transition-all"
+                disabled={result.isDetecting}
+                className={cn(
+                  "text-xs text-primary underline hover:no-underline transition-all",
+                  result.isDetecting && "opacity-50 cursor-not-allowed"
+                )}
               >
-                Auto detect
+                {result.isDetecting ? 'Detecting...' : 'Auto detect'}
               </button>
             </div>
+            
+            {/* Error message */}
+            {result.error && (
+              <p className="text-xs text-muted-foreground">{result.error}</p>
+            )}
             
             {/* Combobox */}
             <Popover open={open} onOpenChange={setOpen}>

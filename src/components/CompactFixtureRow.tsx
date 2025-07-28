@@ -1,5 +1,8 @@
+import { memo, useEffect, useRef } from 'react'
 import { formatTimeInTimezone } from '@/utils/timezone'
 import { cn } from '@/lib/utils'
+import { TeamCrest } from '@/components/ui/TeamCrest'
+import { useScreenReaderContext } from '@/contexts/ScreenReaderContext'
 import type { ProcessedFixture } from '@/types/api'
 
 interface CompactFixtureRowProps {
@@ -10,69 +13,49 @@ interface CompactFixtureRowProps {
   isNextFixture?: boolean
 }
 
-export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC', timeFormat = '24h', isNextFixture = false }: CompactFixtureRowProps) {
+function CompactFixtureRowComponent({ fixture, showScores = false, timezone = 'UTC', timeFormat = '24h', isNextFixture = false }: CompactFixtureRowProps) {
+  const { announceScoreUpdate, announceMatchStatus } = useScreenReaderContext()
+  const prevScoreRef = useRef<{ home: number | null, away: number | null } | null>(null)
+  const prevStatusRef = useRef<string | null>(null)
+
   const kickoffTime = formatTimeInTimezone(fixture.kickoff_time, timezone, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: timeFormat === '12h'
   })
-  
-  // Convert team name to filename for logo
-  const getTeamLogoPath = (teamFullName: string) => {
-    // Convert team name to escaped filename format
-    return teamFullName
-      .toLowerCase()
-      .replace(/\s+/g, '-')      // spaces to hyphens
-      .replace(/'/g, '')         // remove apostrophes
-      .replace(/[^a-z0-9-]/g, '') // remove other special chars
-  }
 
-  // Team crest with fallback to colored circle
-  const getTeamCrest = (teamShortName: string, teamFullName: string) => {
-    const colors: Record<string, string> = {
-      'ARS': 'bg-red-600',
-      'CHE': 'bg-blue-600', 
-      'LIV': 'bg-red-700',
-      'MCI': 'bg-sky-500',
-      'MUN': 'bg-red-600',
-      'TOT': 'bg-blue-800',
-      'NEW': 'bg-black',
-      'AVL': 'bg-purple-600',
-      'WHU': 'bg-red-900',
-      'BRE': 'bg-red-500',
-      'BHA': 'bg-blue-400',
-      'CRY': 'bg-blue-600',
-      'EVE': 'bg-blue-700',
-      'FUL': 'bg-black',
-      'LEI': 'bg-blue-600',
-      'WOL': 'bg-orange-500',
-      'BOU': 'bg-red-500',
-      'NFO': 'bg-red-600',
-      'SOU': 'bg-red-500',
-      'IPS': 'bg-blue-600',
-      'BUR': 'bg-purple-500',
-      'LEE': 'bg-yellow-500',
-      'SUN': 'bg-red-500'
+  // Announce score updates to screen readers
+  useEffect(() => {
+    const currentScore = { home: fixture.team_h_score, away: fixture.team_a_score }
+    const hasScores = currentScore.home !== null && currentScore.away !== null
+    
+    if (hasScores && prevScoreRef.current) {
+      const prevScore = prevScoreRef.current
+      // Check if score actually changed
+      if (prevScore.home !== currentScore.home || prevScore.away !== currentScore.away) {
+        announceScoreUpdate(
+          fixture.team_h_name,
+          fixture.team_a_name,
+          currentScore.home!,
+          currentScore.away!
+        )
+      }
     }
     
-    const logoPath = `/images/team-logos/${getTeamLogoPath(teamFullName)}.png`
+    prevScoreRef.current = currentScore
+  }, [fixture.team_h_score, fixture.team_a_score, fixture.team_h_name, fixture.team_a_name, announceScoreUpdate])
+
+  // Announce match status changes
+  useEffect(() => {
+    const currentStatus = fixture.match_status.status
     
-    return (
-      <img 
-        src={logoPath}
-        alt={`${teamFullName} team crest`}
-        className="w-6 h-6 object-contain"
-        onError={(e) => {
-          // Fallback to colored circle if image fails to load
-          const target = e.target as HTMLImageElement
-          const parent = target.parentElement
-          if (parent) {
-            parent.innerHTML = `<div class="${cn('w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white', colors[teamShortName] || 'bg-gray-500')}" aria-label="${teamFullName} team badge">${teamShortName.slice(0, 2)}</div>`
-          }
-        }}
-      />
-    )
-  }
+    if (prevStatusRef.current && prevStatusRef.current !== currentStatus) {
+      announceMatchStatus(fixture.team_h_name, fixture.team_a_name, currentStatus)
+    }
+    
+    prevStatusRef.current = currentStatus
+  }, [fixture.match_status.status, fixture.team_h_name, fixture.team_a_name, announceMatchStatus])
+  
   
 
   const getScore = () => {
@@ -97,9 +80,20 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
                      fixture.match_status.status === 'finished' ? 'Full time' : 
                      fixture.match_status.status === 'postponed' ? 'Postponed' : ''
 
-  const matchDescription = getScore() 
-    ? `${fixture.team_h_name} ${getScore()} ${fixture.team_a_name} - ${statusText}`
-    : `${fixture.team_h_name} vs ${fixture.team_a_name} at ${kickoffTime}${statusText ? ` - ${statusText}` : ''}`
+  // Enhanced match description for screen readers
+  const getMatchDescription = () => {
+    const hasScores = fixture.team_h_score !== null && fixture.team_a_score !== null
+    const score = getScore()
+    
+    if (hasScores && score) {
+      const scoreText = showScores ? score : 'Score available but hidden'
+      return `Match: ${fixture.team_h_name} versus ${fixture.team_a_name}. ${scoreText}. Status: ${statusText || 'Scheduled'}`
+    }
+    
+    return `Upcoming match: ${fixture.team_h_name} versus ${fixture.team_a_name}. Kickoff time: ${kickoffTime}. ${statusText ? `Status: ${statusText}` : ''}`
+  }
+
+  const matchDescription = getMatchDescription()
 
   return (
     <div 
@@ -111,7 +105,10 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
     >
       {/* Home Team */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {getTeamCrest(fixture.team_h_short_name, fixture.team_h_name)}
+        <TeamCrest 
+          teamShortName={fixture.team_h_short_name} 
+          teamFullName={fixture.team_h_name}
+        />
         <span className={cn(
           'text-sm font-medium truncate',
           { 
@@ -127,7 +124,12 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
         {getScore() ? (
           <span 
             className="text-lg font-bold text-foreground"
-            aria-label={`Score: ${fixture.team_h_name} ${fixture.team_h_score}, ${fixture.team_a_name} ${fixture.team_a_score}`}
+            aria-label={showScores 
+              ? `Current score: ${fixture.team_h_name} ${fixture.team_h_score}, ${fixture.team_a_name} ${fixture.team_a_score}` 
+              : `Score hidden. ${fixture.team_h_name} versus ${fixture.team_a_name} has a score but you have chosen to hide scores.`
+            }
+            role="status"
+            aria-live="polite"
           >
             {getScore()}
           </span>
@@ -141,13 +143,16 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
           </time>
         )}
         {fixture.match_status.status !== 'scheduled' && (
-          <div className={cn(
-            "text-xs",
-            fixture.match_status.status === 'finished' ? 
-              "absolute top-[80%] left-0 w-full text-center" : 
-              "text-info"
-          )}
-          aria-label={statusText}
+          <div 
+            className={cn(
+              "text-xs",
+              fixture.match_status.status === 'finished' ? 
+                "absolute top-[80%] left-0 w-full text-center" : 
+                "text-info"
+            )}
+            aria-label={`Match status: ${statusText}`}
+            role="status"
+            aria-live={fixture.match_status.status === 'live' ? 'polite' : 'off'}
           >
             {fixture.match_status.status === 'live' ? 'LIVE' : 
              fixture.match_status.status === 'finished' ? 'FT' : 
@@ -166,8 +171,27 @@ export function CompactFixtureRow({ fixture, showScores = false, timezone = 'UTC
         )}>
           {fixture.team_a_name}
         </span>
-        {getTeamCrest(fixture.team_a_short_name, fixture.team_a_name)}
+        <TeamCrest 
+          teamShortName={fixture.team_a_short_name} 
+          teamFullName={fixture.team_a_name}
+        />
       </div>
     </div>
   )
 }
+
+// Memoize the component with custom comparison to prevent unnecessary re-renders
+export const CompactFixtureRow = memo(CompactFixtureRowComponent, (prevProps, nextProps) => {
+  // Only re-render if essential props change
+  return (
+    prevProps.fixture.id === nextProps.fixture.id &&
+    prevProps.fixture.kickoff_time === nextProps.fixture.kickoff_time &&
+    prevProps.fixture.team_h_score === nextProps.fixture.team_h_score &&
+    prevProps.fixture.team_a_score === nextProps.fixture.team_a_score &&
+    prevProps.fixture.match_status.status === nextProps.fixture.match_status.status &&
+    prevProps.showScores === nextProps.showScores &&
+    prevProps.timezone === nextProps.timezone &&
+    prevProps.timeFormat === nextProps.timeFormat &&
+    prevProps.isNextFixture === nextProps.isNextFixture
+  )
+})

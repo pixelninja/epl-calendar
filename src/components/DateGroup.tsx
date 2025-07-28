@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo, useMemo } from 'react'
 import { ChevronRight } from '@/components/icons'
 import { CompactFixtureRow } from './CompactFixtureRow'
 import { cn } from '@/lib/utils'
@@ -18,7 +18,7 @@ interface DateGroupProps {
   isEvenRow?: boolean
 }
 
-export function DateGroup({
+function DateGroupComponent({
   date,
   fixtures,
   showScores = false,
@@ -34,31 +34,43 @@ export function DateGroup({
   // Expand today's matches by default, or if this date contains the next fixture
   const [isExpanded, setIsExpanded] = useState(isToday || isNextFixtureDate)
   
-  const formatDateHeader = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const today = new Date()
-    const tomorrow = new Date(today)
-    tomorrow.setDate(today.getDate() + 1)
-    
-    // Check if it's today
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today'
+  const formatDateHeader = useMemo(() => {
+    return (dateStr: string) => {
+      const date = new Date(dateStr)
+      const today = new Date()
+      const tomorrow = new Date(today)
+      tomorrow.setDate(today.getDate() + 1)
+      
+      // Check if it's today
+      if (date.toDateString() === today.toDateString()) {
+        return 'Today'
+      }
+      
+      // Check if it's tomorrow
+      if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow'
+      }
+      
+      // Format as day name and date
+      return date.toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short'
+      })
     }
-    
-    // Check if it's tomorrow
-    if (date.toDateString() === tomorrow.toDateString()) {
-      return 'Tomorrow'
-    }
-    
-    // Format as day name and date
-    return date.toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    })
-  }
+  }, [])
 
-  const allFinished = fixtures.every(f => f.match_status.status === 'finished')
+  const allFinished = useMemo(() => 
+    fixtures.every(f => f.match_status.status === 'finished'), 
+    [fixtures]
+  )
+
+  const sortedFixtures = useMemo(() => 
+    fixtures
+      .slice()
+      .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime()),
+    [fixtures]
+  )
 
   return (
     <section className={cn(
@@ -119,21 +131,36 @@ export function DateGroup({
             'opacity-70': isPast && allFinished
           }
         )}>
-          {fixtures
-            .sort((a, b) => new Date(a.kickoff_time).getTime() - new Date(b.kickoff_time).getTime())
-            .map(fixture => (
-              <article key={fixture.id}>
-                <CompactFixtureRow
-                  fixture={fixture}
-                  showScores={showScores}
-                  timezone={timezone}
-                  timeFormat={timeFormat}
-                  isNextFixture={fixture.id === nextFixtureId}
-                />
-              </article>
-            ))}
+          {sortedFixtures.map(fixture => (
+            <article key={fixture.id}>
+              <CompactFixtureRow
+                fixture={fixture}
+                showScores={showScores}
+                timezone={timezone}
+                timeFormat={timeFormat}
+                isNextFixture={fixture.id === nextFixtureId}
+              />
+            </article>
+          ))}
         </div>
       </div>
     </section>
   )
 }
+
+// Memoize the component with custom comparison to prevent unnecessary re-renders
+export const DateGroup = memo(DateGroupComponent, (prevProps, nextProps) => {
+  // Only re-render if essential props change
+  return (
+    prevProps.date === nextProps.date &&
+    prevProps.fixtures === nextProps.fixtures &&
+    prevProps.showScores === nextProps.showScores &&
+    prevProps.timezone === nextProps.timezone &&
+    prevProps.timeFormat === nextProps.timeFormat &&
+    prevProps.isToday === nextProps.isToday &&
+    prevProps.isPast === nextProps.isPast &&
+    prevProps.isNextFixtureDate === nextProps.isNextFixtureDate &&
+    prevProps.nextFixtureId === nextProps.nextFixtureId
+    // Skip isEvenRow comparison as it's just styling and shouldn't cause re-renders
+  )
+})

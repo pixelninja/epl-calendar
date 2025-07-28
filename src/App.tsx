@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { DateGroup } from '@/components/DateGroup'
 import { TimezoneModal } from '@/components/TimezoneModal'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { FixturesLoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { useFixtures } from '@/hooks/useFixtures'
+import { useFilteredFixtures } from '@/hooks/useFilteredFixtures'
+import { useFixtureGrouping } from '@/hooks/useFixtureGrouping'
 import { useSettings } from '@/contexts/SettingsContext'
+import { useScreenReaderContext } from '@/contexts/ScreenReaderContext'
 import { cn } from '@/lib/utils'
 
 function App() {
@@ -22,41 +27,53 @@ function App() {
   
   const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
   const { data: fixtures = [], isLoading, error } = useFixtures()
+  const { announceLoading, announceError, announceSuccess } = useScreenReaderContext()
 
-  // Filter fixtures based on hidePreviousFixtures setting
-  const filteredFixtures = hidePreviousFixtures 
-    ? fixtures.filter(fixture => new Date(fixture.kickoff_time) >= new Date(new Date().toDateString()))
-    : fixtures
-
-  // Group fixtures by date
-  const fixturesByDate = filteredFixtures.reduce((acc, fixture) => {
-    const date = new Date(fixture.kickoff_time).toDateString()
-    if (!acc[date]) {
-      acc[date] = []
-    }
-    acc[date].push(fixture)
-    return acc
-  }, {} as Record<string, typeof fixtures>)
-
-  const sortedDates = Object.keys(fixturesByDate)
-    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime()) // Earliest first
+  // Use custom hooks for fixture processing
+  const filteredFixtures = useFilteredFixtures(fixtures, hidePreviousFixtures)
+  const { fixturesByDate, sortedDates, nextFixture, nextFixtureDate } = useFixtureGrouping(filteredFixtures)
   
   const today = new Date().toDateString()
-  const now = new Date()
-  
-  // Find the next upcoming fixture (first future fixture)
-  const nextFixture = filteredFixtures.find(fixture => 
-    new Date(fixture.kickoff_time) > now && fixture.match_status.status === 'scheduled'
-  )
-  const nextFixtureDate = nextFixture ? new Date(nextFixture.kickoff_time).toDateString() : null
+
+  // Memoize tab switching functions to prevent unnecessary re-renders
+  const handleFixturesTab = useCallback(() => setActiveTab('fixtures'), [setActiveTab])
+  const handleTableTab = useCallback(() => setActiveTab('table'), [setActiveTab])
+
+  // Screen reader announcements for app state changes
+  useEffect(() => {
+    if (isLoading) {
+      announceLoading('Loading EPL fixtures and scores')
+    }
+  }, [isLoading, announceLoading])
+
+  useEffect(() => {
+    if (error) {
+      announceError('Failed to load fixtures. Please check your connection and try again.')
+    }
+  }, [error, announceError])
+
+  useEffect(() => {
+    if (fixtures.length > 0 && !isLoading && !error) {
+      announceSuccess(`${fixtures.length} fixtures loaded successfully`)
+    }
+  }, [fixtures.length, isLoading, error, announceSuccess])
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader state="loading" />
-        <main className="flex items-center justify-center py-12" role="main">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
+        <nav className="bg-white border-b border-border" role="navigation" aria-label="Main navigation">
+          <div className="flex" role="tablist">
+            <div className="flex-1 py-3 text-sm font-medium text-primary border-b-2 border-primary text-center">
+              Fixtures
+            </div>
+            <div className="flex-1 py-3 text-sm font-medium text-muted-foreground border-b-2 border-transparent text-center">
+              Table
+            </div>
+          </div>
+        </nav>
+        <main role="main">
+          <FixturesLoadingSkeleton />
         </main>
       </div>
     )
@@ -93,7 +110,7 @@ function App() {
       <nav className="bg-white border-b border-border" role="navigation" aria-label="Main navigation">
         <div className="flex" role="tablist">
           <button
-            onClick={() => setActiveTab('fixtures')}
+            onClick={handleFixturesTab}
             className={cn(
               'flex-1 py-3 text-sm font-medium transition-colors border-b-2',
               activeTab === 'fixtures' 
@@ -109,7 +126,7 @@ function App() {
           </button>
           
           <button
-            onClick={() => setActiveTab('table')}
+            onClick={handleTableTab}
             className={cn(
               'flex-1 py-3 text-sm font-medium transition-colors border-b-2',
               activeTab === 'table' 
@@ -127,12 +144,17 @@ function App() {
       </nav>
 
       <main role="main">
-        {activeTab === 'fixtures' ? (
+        {/* Fixtures Tab */}
+        <ErrorBoundary>
           <section 
-            className="bg-background" 
+            className={cn(
+              "bg-background",
+              activeTab === 'fixtures' ? 'block' : 'hidden'
+            )}
             role="tabpanel" 
             id="fixtures-panel" 
             aria-labelledby="fixtures-tab"
+            aria-hidden={activeTab !== 'fixtures'}
           >
             {sortedDates.length > 0 ? (
               sortedDates.map((date, index) => {
@@ -142,19 +164,20 @@ function App() {
                 const isNextFixtureDate = date === nextFixtureDate
                 
                 return (
-                  <DateGroup
-                    key={date}
-                    date={date}
-                    fixtures={dateFixtures}
-                    showScores={showScores}
-                    timezone={selectedTimezone}
-                    timeFormat={timeFormat}
-                    isToday={isToday}
-                    isPast={isPast}
-                    isNextFixtureDate={isNextFixtureDate}
-                    nextFixtureId={nextFixture?.id}
-                    isEvenRow={index % 2 === 0}
-                  />
+                  <ErrorBoundary key={date}>
+                    <DateGroup
+                      date={date}
+                      fixtures={dateFixtures}
+                      showScores={showScores}
+                      timezone={selectedTimezone}
+                      timeFormat={timeFormat}
+                      isToday={isToday}
+                      isPast={isPast}
+                      isNextFixtureDate={isNextFixtureDate}
+                      nextFixtureId={nextFixture?.id}
+                      isEvenRow={index % 2 === 0}
+                    />
+                  </ErrorBoundary>
                 )
               })
             ) : (
@@ -163,18 +186,25 @@ function App() {
               </div>
             )}
           </section>
-        ) : (
+        </ErrorBoundary>
+
+        {/* Table Tab */}
+        <ErrorBoundary>
           <section 
-            className="p-4" 
+            className={cn(
+              "p-4",
+              activeTab === 'table' ? 'block' : 'hidden'
+            )}
             role="tabpanel" 
             id="table-panel" 
             aria-labelledby="table-tab"
+            aria-hidden={activeTab !== 'table'}
           >
             <div className="text-center py-12">
               <p className="text-sm text-muted-foreground">League table coming soon...</p>
             </div>
           </section>
-        )}
+        </ErrorBoundary>
       </main>
 
 

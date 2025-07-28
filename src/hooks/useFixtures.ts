@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { fplApi } from '@/lib/api'
-import type { ProcessedFixture, FixtureWithTeams } from '@/types/api'
 
 export function useFixtures() {
   return useQuery({
