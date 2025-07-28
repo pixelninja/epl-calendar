@@ -1,6 +1,7 @@
 import { useState, memo, useMemo } from 'react'
 import { ChevronRight } from '@/components/icons'
 import { CompactFixtureRow } from './CompactFixtureRow'
+import { useAccordionHeight } from '@/hooks/useAccordionHeight'
 import { cn } from '@/lib/utils'
 import type { ProcessedFixture } from '@/types/api'
 
@@ -33,6 +34,9 @@ function DateGroupComponent({
 }: DateGroupProps) {
   // Expand today's matches by default, or if this date contains the next fixture
   const [isExpanded, setIsExpanded] = useState(isToday || isNextFixtureDate)
+  
+  // Use dynamic height calculation for smooth accordion animation
+  const { contentRef, accordionStyles } = useAccordionHeight(isExpanded)
   
   const formatDateHeader = useMemo(() => {
     return (dateStr: string) => {
@@ -117,20 +121,21 @@ function DateGroupComponent({
       </button>
 
       <div 
-        className={cn(
-          "overflow-hidden transition-all duration-300 ease-in-out",
-          isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
-        )}
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={accordionStyles}
         id={`fixtures-${date}`}
         role="region"
         aria-labelledby={`date-${date}`}
       >
-        <div className={cn(
-          'bg-background',
-          {
-            'opacity-70': isPast && allFinished
-          }
-        )}>
+        <div 
+          ref={contentRef}
+          className={cn(
+            'bg-background',
+            {
+              'opacity-70': isPast && allFinished
+            }
+          )}
+        >
           {sortedFixtures.map(fixture => (
             <article key={fixture.id}>
               <CompactFixtureRow
