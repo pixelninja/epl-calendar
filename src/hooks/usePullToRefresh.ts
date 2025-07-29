@@ -30,10 +30,12 @@ export function usePullToRefresh({
     let isAtTop = false
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Only trigger if we're at the top of the page
-      isAtTop = window.scrollY === 0
+      // Only trigger if we're at the top of the scrollable container
+      const scrollTop = container.scrollTop || window.scrollY || document.documentElement.scrollTop
+      isAtTop = scrollTop <= 0
       if (isAtTop) {
         touchStartY.current = e.touches[0].clientY
+        currentPullDistance.current = 0
       }
     }
 
@@ -64,8 +66,19 @@ export function usePullToRefresh({
         setIsRefreshing(true)
         
         // Add haptic feedback
-        if ('vibrate' in navigator) {
-          navigator.vibrate(50)
+        try {
+          if ('vibrate' in navigator) {
+            navigator.vibrate(50)
+          }
+          // Try iOS haptic feedback if available
+          if ((window as any).DeviceMotionEvent && typeof (window as any).DeviceMotionEvent.requestPermission === 'function') {
+            // iOS haptic feedback (limited support)
+            if ('navigator' in window && 'vibrate' in navigator) {
+              navigator.vibrate(50)
+            }
+          }
+        } catch (error) {
+          console.debug('Haptic feedback failed:', error)
         }
         
         try {

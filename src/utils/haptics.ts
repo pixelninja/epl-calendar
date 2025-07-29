@@ -10,7 +10,36 @@ export type HapticPattern = 'light' | 'medium' | 'heavy' | 'success' | 'error' |
  */
 export function triggerHaptic(pattern: HapticPattern = 'light'): void {
   try {
-    // Modern Haptic API (limited browser support)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    
+    if (isIOS) {
+      // iOS doesn't support navigator.vibrate, but we can try Audio API as fallback
+      // or use CSS animations to provide visual feedback
+      console.debug('iOS haptic feedback requested but not directly supported')
+      
+      // Try to trigger a very short audio feedback (iOS specific)
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const oscillator = audioContext.createOscillator()
+        const gainNode = audioContext.createGain()
+        
+        oscillator.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.01)
+        
+        oscillator.start(audioContext.currentTime)
+        oscillator.stop(audioContext.currentTime + 0.01)
+      } catch (audioError) {
+        console.debug('Audio haptic fallback failed:', audioError)
+      }
+      
+      return
+    }
+    
+    // Android and other devices - use vibration API
     if ('vibrate' in navigator) {
       let vibrationPattern: number | number[]
       
@@ -38,12 +67,6 @@ export function triggerHaptic(pattern: HapticPattern = 'light'): void {
       }
       
       navigator.vibrate(vibrationPattern)
-    }
-    
-    // iOS Safari specific haptic feedback (if available)
-    if (window.DeviceMotionEvent && typeof (window as any).DeviceMotionEvent.requestPermission === 'function') {
-      // This is a more advanced haptic implementation for iOS
-      // For now, we'll just use the vibration pattern above
     }
   } catch (error) {
     // Silently fail if haptics aren't supported

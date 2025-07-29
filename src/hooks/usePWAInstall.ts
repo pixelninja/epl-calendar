@@ -45,7 +45,13 @@ export function usePWAInstall(): UsePWAInstallReturn {
       setCanShowPrompt(false)
     }
 
-    // Listen for the beforeinstallprompt event
+    // For iOS, we need to show manual install instructions since beforeinstallprompt doesn't fire
+    if (isIOS && !isStandalone && !hasPromptBeenDismissed) {
+      setIsInstallable(true)
+      setCanShowPrompt(true)
+    }
+
+    // Listen for the beforeinstallprompt event (Android/Chrome)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
       const installEvent = e as BeforeInstallPromptEvent
@@ -62,14 +68,19 @@ export function usePWAInstall(): UsePWAInstallReturn {
       localStorage.removeItem('pwa-install-dismissed')
     }
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
+    // Only add these listeners for non-iOS devices
+    if (!isIOS) {
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.addEventListener('appinstalled', handleAppInstalled)
+    }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
+      if (!isIOS) {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+        window.removeEventListener('appinstalled', handleAppInstalled)
+      }
     }
-  }, [isStandalone])
+  }, [isStandalone, isIOS])
 
   const showInstallPrompt = useCallback(async (): Promise<boolean> => {
     if (!deferredPrompt) {

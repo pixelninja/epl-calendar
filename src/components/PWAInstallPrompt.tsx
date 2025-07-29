@@ -26,15 +26,17 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
 
   // Show dialog after user has interacted with the app (to avoid immediate popup)
   useEffect(() => {
-    if (isInstallable && canShowPrompt && hasInteracted && !showDialog) {
-      // Delay showing dialog to avoid interrupting user flow
+    if (isInstallable && canShowPrompt && hasInteracted && !showDialog && !isInstalled) {
+      // For iOS, show immediately after interaction since we can't auto-install
+      // For other platforms, add a small delay
+      const delay = isIOS ? 1000 : 3000
       const timer = setTimeout(() => {
         setShowDialog(true)
-      }, 3000) // Show after 3 seconds of interaction
+      }, delay)
       
       return () => clearTimeout(timer)
     }
-  }, [isInstallable, canShowPrompt, hasInteracted, showDialog])
+  }, [isInstallable, canShowPrompt, hasInteracted, showDialog, isInstalled, isIOS])
 
   // Track user interaction to show prompt at appropriate time
   useEffect(() => {
