@@ -14,7 +14,7 @@ import { useNotificationScheduler } from '@/hooks/useNotificationScheduler'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { useSettings } from '@/contexts/SettingsContext'
 import { useScreenReaderContext } from '@/contexts/ScreenReaderContext'
-import { hapticTap } from '@/utils/haptics'
+import { PWAInstallProvider } from '@/contexts/PWAInstallContext'
 import { cn } from '@/lib/utils'
 
 function App() {
@@ -72,12 +72,10 @@ function App() {
 
   // Memoize tab switching functions to prevent unnecessary re-renders
   const handleFixturesTab = useCallback(() => {
-    hapticTap()
     setActiveTab('fixtures')
   }, [setActiveTab])
   
   const handleTableTab = useCallback(() => {
-    hapticTap()
     setActiveTab('table')
   }, [setActiveTab])
 
@@ -102,8 +100,9 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader state="loading" />
+      <PWAInstallProvider>
+        <div className="min-h-screen bg-background">
+          <AppHeader state="loading" />
         <nav className="bg-white border-b border-border" role="navigation" aria-label="Main navigation">
           <div className="flex" role="tablist">
             <div className="flex-1 py-3 text-sm font-medium text-primary border-b-2 border-primary text-center">
@@ -114,31 +113,35 @@ function App() {
             </div>
           </div>
         </nav>
-        <main role="main">
-          <FixturesLoadingSkeleton />
-        </main>
-      </div>
+          <main role="main">
+            <FixturesLoadingSkeleton />
+          </main>
+        </div>
+      </PWAInstallProvider>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
-        <AppHeader state="error" />
-        <main className="p-4" role="main">
-          <div className="text-center py-12">
-            <p className="text-sm text-destructive font-medium">Error Loading Fixtures</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Unable to load data. Please try again.
-            </p>
-          </div>
-        </main>
-      </div>
+      <PWAInstallProvider>
+        <div className="min-h-screen bg-background">
+          <AppHeader state="error" />
+          <main className="p-4" role="main">
+            <div className="text-center py-12">
+              <p className="text-sm text-destructive font-medium">Error Loading Fixtures</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Unable to load data. Please try again.
+              </p>
+            </div>
+          </main>
+        </div>
+      </PWAInstallProvider>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <PWAInstallProvider>
+      <div className="min-h-screen bg-background">
       <AppHeader 
         state="normal"
         showScores={showScores}
@@ -202,10 +205,10 @@ function App() {
             {/* Pull to refresh indicator */}
             {(isPulling || isRefreshing) && (
               <div 
-                className="absolute top-0 left-0 right-0 flex items-center justify-center bg-primary/10 transition-all duration-200"
+                className="fixed top-0 left-0 right-0 flex items-center justify-center bg-primary/10 transition-all duration-300 ease-out z-50"
                 style={{ 
                   height: `${Math.max(pullDistance, isRefreshing ? 60 : 0)}px`,
-                  transform: `translateY(-${Math.max(pullDistance, isRefreshing ? 60 : 0)}px)`
+                  transform: `translateY(${Math.max(pullDistance - 60, isRefreshing ? 0 : -60)}px)`
                 }}
               >
                 <div className="flex items-center gap-2 text-primary">
@@ -299,9 +302,10 @@ function App() {
       {/* PWA Install Prompt - automatically handles its own visibility */}
       <PWAInstallPrompt />
       
-      {/* Footer with legal attribution */}
-      <AppFooter />
-    </div>
+        {/* Footer with legal attribution */}
+        <AppFooter />
+      </div>
+    </PWAInstallProvider>
   )
 }
 

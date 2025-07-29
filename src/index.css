@@ -81,3 +81,37 @@
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 }
+
+/* Hide scrollbars while maintaining scroll functionality */
+@layer base {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  
+  /* Firefox */
+  html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  /* For any specific containers that need hidden scrollbars */
+  .hide-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+}

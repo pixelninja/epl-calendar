@@ -65,21 +65,6 @@ export function usePullToRefresh({
       if (currentPullDistance.current >= threshold) {
         setIsRefreshing(true)
         
-        // Add haptic feedback
-        try {
-          if ('vibrate' in navigator) {
-            navigator.vibrate(50)
-          }
-          // Try iOS haptic feedback if available
-          if ((window as any).DeviceMotionEvent && typeof (window as any).DeviceMotionEvent.requestPermission === 'function') {
-            // iOS haptic feedback (limited support)
-            if ('navigator' in window && 'vibrate' in navigator) {
-              navigator.vibrate(50)
-            }
-          }
-        } catch (error) {
-          console.debug('Haptic feedback failed:', error)
-        }
         
         try {
           await onRefresh()

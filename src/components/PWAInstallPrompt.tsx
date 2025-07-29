@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { X, Download, Smartphone, CheckCircle } from '@/components/icons'
-import { usePWAInstall } from '@/hooks/usePWAInstall'
+import { usePWAInstallContext } from '@/contexts/PWAInstallContext'
 import { cn } from '@/lib/utils'
 
 interface PWAInstallPromptProps {
@@ -17,12 +17,13 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
     dismissPrompt,
     isIOS,
     isStandalone
-  } = usePWAInstall()
+  } = usePWAInstallContext()
   
   const [showDialog, setShowDialog] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [hasInteracted, setHasInteracted] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
+  const [isAnimatingIn, setIsAnimatingIn] = useState(false)
 
   // Show dialog after user has interacted with the app (to avoid immediate popup)
   useEffect(() => {
@@ -32,6 +33,8 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
       const delay = isIOS ? 1000 : 3000
       const timer = setTimeout(() => {
         setShowDialog(true)
+        // Trigger animation after a brief delay to ensure element is mounted
+        setTimeout(() => setIsAnimatingIn(true), 50)
       }, delay)
       
       return () => clearTimeout(timer)
@@ -78,8 +81,12 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
   }
 
   const handleDismiss = () => {
-    dismissPrompt()
-    setShowDialog(false)
+    setIsAnimatingIn(false)
+    // Wait for animation to complete before hiding dialog
+    setTimeout(() => {
+      dismissPrompt()
+      setShowDialog(false)
+    }, 300)
   }
 
   // Don't render if already installed or can't show prompt
@@ -91,7 +98,9 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
   if (showSuccess) {
     return (
       <div className={cn(
-        "fixed bottom-4 left-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg z-50 animate-in slide-in-from-bottom-2",
+        "fixed bottom-4 left-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg z-50",
+        "transform transition-all duration-300 ease-out",
+        "translate-y-0 opacity-100",
         className
       )}>
         <div className="flex items-center gap-3">
@@ -110,10 +119,19 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
     return (
       <>
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/50 z-50" onClick={handleDismiss} />
+        <div 
+          className={cn(
+            "fixed inset-0 bg-black/50 z-50 transition-opacity duration-300 ease-out",
+            isAnimatingIn ? "opacity-100" : "opacity-0"
+          )} 
+          onClick={handleDismiss} 
+        />
         
         {/* Dialog */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-lg animate-in slide-in-from-bottom-4">
+        <div className={cn(
+          "fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-lg transform transition-all duration-300 ease-out",
+          isAnimatingIn ? "translate-y-0" : "translate-y-full"
+        )}>
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
             <div className="flex items-center gap-3">

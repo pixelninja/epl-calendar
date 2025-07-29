@@ -58,8 +58,8 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       const notification = new Notification(options.title, {
         body: options.body,
-        icon: options.icon || '/pwa-192x192.png',
-        badge: options.badge || '/pwa-192x192.png',
+        icon: options.icon || '/android-chrome-192x192.png',
+        badge: options.badge || '/android-chrome-192x192.png',
         tag: options.tag,
         requireInteraction: options.requireInteraction || false,
         silent: false,
@@ -121,7 +121,7 @@ export function useNotifications(): UseNotificationsReturn {
                 title: 'Match Starting Soon!',
                 body: `${fixture.team_h_short_name} vs ${fixture.team_a_short_name} kicks off in 15 minutes`,
                 tag: `fixture-${fixture.id}-15min`,
-                icon: '/pwa-192x192.png',
+                icon: '/android-chrome-192x192.png',
               })
             }, notification15min)
             newTimeouts.add(timeout15)
@@ -134,7 +134,7 @@ export function useNotifications(): UseNotificationsReturn {
                 title: 'Match Kicked Off!',
                 body: `${fixture.team_h_short_name} vs ${fixture.team_a_short_name} has started`,
                 tag: `fixture-${fixture.id}-kickoff`,
-                icon: '/pwa-192x192.png',
+                icon: '/android-chrome-192x192.png',
                 requireInteraction: false,
               })
             }, timeDiff)

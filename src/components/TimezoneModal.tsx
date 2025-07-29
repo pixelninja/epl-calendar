@@ -185,7 +185,7 @@ export function TimezoneModal({
             variant="ghost" 
             size="sm"
             onClick={onClose}
-            className="p-2"
+            className="p-2 -mr-2.5"
           >
             <X className="h-5 w-5" />
           </Button>

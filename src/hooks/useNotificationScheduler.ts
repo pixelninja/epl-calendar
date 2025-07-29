@@ -54,7 +54,7 @@ export function useNotificationScheduler({
         title: `⚽ ${favoriteTeam.short_name} plays ${type}!`,
         body: `${favoriteTeam.short_name} ${venue} ${opponent} at ${kickoffTime}${dayFixtures.length > 1 ? ` • ${dayFixtures.length} games total` : ''}`,
         tag: `daily-${type}-favorite`,
-        icon: '/pwa-192x192.png'
+        icon: '/android-chrome-192x192.png'
       }
     }
 
@@ -97,14 +97,14 @@ export function useNotificationScheduler({
         title: `⚽ ${favoriteTeam.short_name} plays tomorrow`,
         body: `${favoriteTeam.short_name} ${venue} ${opponent} at ${kickoffTime}`,
         tag: `favorite-team-${fixture.id}-day-before`,
-        icon: '/pwa-192x192.png'
+        icon: '/android-chrome-192x192.png'
       }
     } else {
       return {
         title: `⚽ ${favoriteTeam.short_name} kicks off soon!`,
         body: `${favoriteTeam.short_name} ${venue} ${opponent} starts in 1 hour`,
         tag: `favorite-team-${fixture.id}-kickoff`,
-        icon: '/pwa-192x192.png'
+        icon: '/android-chrome-192x192.png'
       }
     }
   }, [favoriteTeamId, timezone])

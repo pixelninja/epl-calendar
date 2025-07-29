@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
-import { Bell, Globe } from '@/components/icons'
+import { usePWAInstallContext } from '@/contexts/PWAInstallContext'
+import { Bell, Globe, Download } from '@/components/icons'
 
 interface AppHeaderProps {
   /** Current state of the application */
@@ -31,6 +31,10 @@ export function AppHeader({
 }: AppHeaderProps) {
   const showControls = state === 'normal'
   const shouldShowScoresToggle = showScoresToggle && !hidePreviousFixtures && showControls
+  const { isInstallable, canShowPrompt, isInstalled, isStandalone } = usePWAInstallContext()
+  
+  // Show compact install button if installable and can show prompt
+  const showInstallButton = isInstallable && canShowPrompt && !isInstalled && !isStandalone
 
   return (
     <header className="bg-primary text-white shadow-lg sticky top-0 z-40">
@@ -53,7 +57,16 @@ export function AppHeader({
           {showControls && (
             <div className="flex flex-col items-end justify-between mt-2">
               <div className="flex items-center gap-4">
-                <PWAInstallPrompt className="text-white hover:bg-white/10 p-2" />
+                {showInstallButton && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-2 text-white hover:bg-white/10"
+                    aria-label="Install App"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                )}
                 
                 <Button 
                   variant="ghost" 

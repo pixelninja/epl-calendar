@@ -11,12 +11,12 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon-16x16.png', 'favicon-32x32.png'],
       manifest: {
         name: 'EPL Calendar',
         short_name: 'EPL Calendar',
         description: 'Premier League fixtures and results with real-time scores',
-        theme_color: '#381e72',
+        theme_color: '#38003c',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
@@ -24,13 +24,28 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'android-chrome-192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'android-chrome-512x512.png',
             sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png'
+          },
+          {
+            src: 'favicon-32x32.png',
+            sizes: '32x32',
+            type: 'image/png'
+          },
+          {
+            src: 'favicon-16x16.png',
+            sizes: '16x16',
             type: 'image/png'
           }
         ]
