@@ -10,6 +10,7 @@ interface SettingsContextType {
   selectedTimezone: string
   timeFormat: '12h' | '24h'
   hidePreviousFixtures: boolean
+  favoriteTeamId: number | null
   
   // Settings setters
   setActiveTab: (tab: 'fixtures' | 'table') => void
@@ -17,6 +18,7 @@ interface SettingsContextType {
   setSelectedTimezone: (timezone: string) => void
   setTimeFormat: (format: '12h' | '24h') => void
   setHidePreviousFixtures: (hide: boolean) => void
+  setFavoriteTeamId: (teamId: number | null) => void
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -31,6 +33,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const [selectedTimezone, setSelectedTimezone] = useLocalStorage<string>('epl-calendar-timezone', getUserTimezone())
   const [timeFormat, setTimeFormat] = useLocalStorage<'12h' | '24h'>('epl-calendar-time-format', '24h')
   const [hidePreviousFixtures, setHidePreviousFixtures] = useLocalStorage<boolean>('epl-calendar-hide-previous', false)
+  const [favoriteTeamId, setFavoriteTeamId] = useLocalStorage<number | null>('epl-calendar-favorite-team', null)
 
   return (
     <SettingsContext.Provider
@@ -40,11 +43,13 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         selectedTimezone,
         timeFormat,
         hidePreviousFixtures,
+        favoriteTeamId,
         setActiveTab,
         setShowScores,
         setSelectedTimezone,
         setTimeFormat,
         setHidePreviousFixtures,
+        setFavoriteTeamId,
       }}
     >
       {children}

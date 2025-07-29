@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { X, Check, ChevronsUpDown } from '@/components/icons'
 import { useTimezoneDetection } from '@/hooks/useTimezoneDetection'
+import { getTeamsSortedByName, getTeamById } from '@/utils/teamHelpers'
 import { cn } from '@/lib/utils'
 
 interface TimezoneModalProps {
@@ -17,6 +18,8 @@ interface TimezoneModalProps {
   onTimeFormatChange: (format: '12h' | '24h') => void
   hidePreviousFixtures: boolean
   onHidePreviousChange: (hide: boolean) => void
+  favoriteTeamId: number | null
+  onFavoriteTeamChange: (teamId: number | null) => void
 }
 
 const ALL_TIMEZONES = [
@@ -108,12 +111,16 @@ export function TimezoneModal({
   timeFormat,
   onTimeFormatChange,
   hidePreviousFixtures,
-  onHidePreviousChange
+  onHidePreviousChange,
+  favoriteTeamId,
+  onFavoriteTeamChange
 }: TimezoneModalProps) {
   const [selectedTimezone, setSelectedTimezone] = useState(currentTimezone)
   const [selectedTimeFormat, setSelectedTimeFormat] = useState(timeFormat)
   const [selectedHidePrevious, setSelectedHidePrevious] = useState(hidePreviousFixtures)
+  const [selectedFavoriteTeamId, setSelectedFavoriteTeamId] = useState(favoriteTeamId)
   const [open, setOpen] = useState(false)
+  const [teamOpen, setTeamOpen] = useState(false)
   
   const { detect, result, clearResult } = useTimezoneDetection()
 
@@ -135,6 +142,7 @@ export function TimezoneModal({
     onTimezoneChange(selectedTimezone)
     onTimeFormatChange(selectedTimeFormat)
     onHidePreviousChange(selectedHidePrevious)
+    onFavoriteTeamChange(selectedFavoriteTeamId)
     onClose()
   }
 
@@ -143,6 +151,16 @@ export function TimezoneModal({
     const current = ALL_TIMEZONES.find(tz => tz.value === selectedTimezone)
     return current ? current.label : selectedTimezone
   }
+
+  // Get the current team label for display
+  const getCurrentTeamLabel = () => {
+    if (selectedFavoriteTeamId === null) return 'No team selected'
+    const team = getTeamById(selectedFavoriteTeamId)
+    return team ? `${team.name} (${team.short_name})` : 'No team selected'
+  }
+
+  // Get all teams sorted by name for the selector
+  const allTeams = getTeamsSortedByName()
 
   return (
     <>
@@ -233,6 +251,83 @@ export function TimezoneModal({
                             className={cn(
                               "ml-2 h-4 w-4",
                               selectedTimezone === tz.value ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Favorite Team Selection */}
+          <div className="space-y-2">
+            <Label className="text-lg font-medium text-foreground">Favorite Team</Label>
+            <div className="text-sm text-muted-foreground mb-2">Show your team's crest on days they're playing</div>
+            
+            {/* Team Combobox */}
+            <Popover open={teamOpen} onOpenChange={setTeamOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={teamOpen}
+                  className="w-full justify-between p-2"
+                >
+                  {getCurrentTeamLabel()}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)] p-0 bg-white" align="start">
+                <Command>
+                  <CommandInput placeholder="Search teams..." />
+                  <CommandList className="max-h-[150px]">
+                    <CommandEmpty>No team found.</CommandEmpty>
+                    <CommandGroup>
+                      {/* Clear selection option */}
+                      <CommandItem
+                        value="no-team-selected"
+                        onSelect={() => {
+                          setSelectedFavoriteTeamId(null)
+                          onFavoriteTeamChange(null)
+                          setTeamOpen(false)
+                        }}
+                        className={cn(
+                          "justify-between",
+                          selectedFavoriteTeamId === null && "bg-primary text-white"
+                        )}
+                      >
+                        No team selected
+                        <Check
+                          className={cn(
+                            "ml-2 h-4 w-4",
+                            selectedFavoriteTeamId === null ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                      </CommandItem>
+                      
+                      {/* Team options */}
+                      {allTeams.map((team) => (
+                        <CommandItem
+                          key={team.id}
+                          value={`${team.name} ${team.short_name}`}
+                          onSelect={() => {
+                            setSelectedFavoriteTeamId(team.id)
+                            onFavoriteTeamChange(team.id)
+                            setTeamOpen(false)
+                          }}
+                          className={cn(
+                            "justify-between",
+                            selectedFavoriteTeamId === team.id && "bg-primary text-white"
+                          )}
+                        >
+                          {team.name} ({team.short_name})
+                          <Check
+                            className={cn(
+                              "ml-2 h-4 w-4",
+                              selectedFavoriteTeamId === team.id ? "opacity-100" : "opacity-0"
                             )}
                           />
                         </CommandItem>

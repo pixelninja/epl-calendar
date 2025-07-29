@@ -1,7 +1,9 @@
 import { useState, memo, useMemo } from 'react'
 import { ChevronRight } from '@/components/icons'
 import { CompactFixtureRow } from './CompactFixtureRow'
+import { TeamCrest } from './ui/TeamCrest'
 import { useAccordionHeight } from '@/hooks/useAccordionHeight'
+import { getTeamById, isTeamPlayingInFixtures } from '@/utils/teamHelpers'
 import { cn } from '@/lib/utils'
 import type { ProcessedFixture } from '@/types/api'
 
@@ -17,6 +19,7 @@ interface DateGroupProps {
   nextFixtureId?: number
   className?: string
   isEvenRow?: boolean
+  favoriteTeamId?: number | null
 }
 
 function DateGroupComponent({
@@ -30,7 +33,8 @@ function DateGroupComponent({
   isNextFixtureDate = false,
   nextFixtureId,
   className,
-  isEvenRow = false
+  isEvenRow = false,
+  favoriteTeamId = null
 }: DateGroupProps) {
   // Expand today's matches by default, or if this date contains the next fixture
   const [isExpanded, setIsExpanded] = useState(isToday || isNextFixtureDate)
@@ -76,6 +80,18 @@ function DateGroupComponent({
     [fixtures]
   )
 
+  // Check if favorite team is playing on this date
+  const favoriteTeamIsPlaying = useMemo(() => 
+    isTeamPlayingInFixtures(favoriteTeamId, fixtures),
+    [favoriteTeamId, fixtures]
+  )
+
+  // Get favorite team details for display
+  const favoriteTeam = useMemo(() => 
+    getTeamById(favoriteTeamId),
+    [favoriteTeamId]
+  )
+
   return (
     <section className={cn(
       'border-b border-border/30',
@@ -113,6 +129,14 @@ function DateGroupComponent({
         </div>
         
         <div className="flex items-center gap-2">
+          {favoriteTeamIsPlaying && favoriteTeam && (
+            <TeamCrest 
+              teamShortName={favoriteTeam.short_name}
+              teamFullName={favoriteTeam.name}
+              size="sm"
+              className="opacity-90 transition-opacity duration-200"
+            />
+          )}
           <ChevronRight className={cn(
             "h-4 w-4 text-muted-foreground transition-transform duration-200",
             isExpanded && "rotate-90"
@@ -165,7 +189,8 @@ export const DateGroup = memo(DateGroupComponent, (prevProps, nextProps) => {
     prevProps.isToday === nextProps.isToday &&
     prevProps.isPast === nextProps.isPast &&
     prevProps.isNextFixtureDate === nextProps.isNextFixtureDate &&
-    prevProps.nextFixtureId === nextProps.nextFixtureId
+    prevProps.nextFixtureId === nextProps.nextFixtureId &&
+    prevProps.favoriteTeamId === nextProps.favoriteTeamId
     // Skip isEvenRow comparison as it's just styling and shouldn't cause re-renders
   )
 })

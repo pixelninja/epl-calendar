@@ -18,11 +18,13 @@ function App() {
     selectedTimezone,
     timeFormat,
     hidePreviousFixtures,
+    favoriteTeamId,
     setActiveTab,
     setShowScores,
     setSelectedTimezone,
     setTimeFormat,
     setHidePreviousFixtures,
+    setFavoriteTeamId,
   } = useSettings()
   
   const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
@@ -148,7 +150,7 @@ function App() {
         <ErrorBoundary>
           <section 
             className={cn(
-              "bg-background",
+              "bg-background pb-14",
               activeTab === 'fixtures' ? 'block' : 'hidden'
             )}
             role="tabpanel" 
@@ -176,6 +178,7 @@ function App() {
                       isNextFixtureDate={isNextFixtureDate}
                       nextFixtureId={nextFixture?.id}
                       isEvenRow={index % 2 === 0}
+                      favoriteTeamId={favoriteTeamId}
                     />
                   </ErrorBoundary>
                 )
@@ -192,7 +195,7 @@ function App() {
         <ErrorBoundary>
           <section 
             className={cn(
-              "p-4",
+              "p-4 pb-14",
               activeTab === 'table' ? 'block' : 'hidden'
             )}
             role="tabpanel" 
@@ -217,6 +220,8 @@ function App() {
         onTimeFormatChange={setTimeFormat}
         hidePreviousFixtures={hidePreviousFixtures}
         onHidePreviousChange={setHidePreviousFixtures}
+        favoriteTeamId={favoriteTeamId}
+        onFavoriteTeamChange={setFavoriteTeamId}
       />
     </div>
   )
