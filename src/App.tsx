@@ -4,6 +4,7 @@ import { TimezoneModal } from '@/components/TimezoneModal'
 import { NotificationsModal } from '@/components/NotificationsModal'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
+import { AppFooter } from '@/components/AppFooter'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { FixturesLoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { useFixtures } from '@/hooks/useFixtures'
@@ -190,7 +191,7 @@ function App() {
           <section 
             ref={containerRef as React.RefObject<HTMLElement>}
             className={cn(
-              "bg-background pb-14 relative",
+              "bg-background relative",
               activeTab === 'fixtures' ? 'block' : 'hidden'
             )}
             role="tabpanel" 
@@ -297,6 +298,9 @@ function App() {
 
       {/* PWA Install Prompt - automatically handles its own visibility */}
       <PWAInstallPrompt />
+      
+      {/* Footer with legal attribution */}
+      <AppFooter />
     </div>
   )
 }
