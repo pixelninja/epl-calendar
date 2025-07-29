@@ -21,7 +21,7 @@ interface UseNotificationsReturn {
 
 export function useNotifications(): UseNotificationsReturn {
   const [permission, setPermission] = useState<NotificationPermission>('default')
-  const [scheduledTimeouts, setScheduledTimeouts] = useState<Set<NodeJS.Timeout>>(new Set())
+  const [, setScheduledTimeouts] = useState<Set<NodeJS.Timeout>>(new Set())
 
   const isSupported = 'Notification' in window && 'serviceWorker' in navigator
 
@@ -84,63 +84,68 @@ export function useNotifications(): UseNotificationsReturn {
   }, [isSupported, permission])
 
   const clearScheduledNotifications = useCallback(() => {
-    scheduledTimeouts.forEach(timeout => clearTimeout(timeout))
-    setScheduledTimeouts(new Set())
-  }, [scheduledTimeouts])
+    setScheduledTimeouts(prevTimeouts => {
+      prevTimeouts.forEach(timeout => clearTimeout(timeout))
+      return new Set()
+    })
+  }, [])
 
   const scheduleFixtureNotifications = useCallback((fixtures: ProcessedFixture[]) => {
     if (!isSupported || permission !== 'granted') {
       return
     }
 
-    // Clear existing scheduled notifications
-    clearScheduledNotifications()
+    // Clear existing scheduled notifications and set new ones
+    setScheduledTimeouts(prevTimeouts => {
+      // Clear previous timeouts
+      prevTimeouts.forEach(timeout => clearTimeout(timeout))
+      
+      const now = new Date()
+      const newTimeouts = new Set<NodeJS.Timeout>()
 
-    const now = new Date()
-    const newTimeouts = new Set<NodeJS.Timeout>()
-
-    fixtures.forEach(fixture => {
-      if (fixture.match_status.status !== 'scheduled') {
-        return
-      }
-
-      const kickoffTime = new Date(fixture.kickoff_time)
-      const timeDiff = kickoffTime.getTime() - now.getTime()
-
-      // Schedule notifications for fixtures within the next 24 hours
-      if (timeDiff > 0 && timeDiff <= 24 * 60 * 60 * 1000) {
-        // Notification 15 minutes before kickoff
-        const notification15min = timeDiff - (15 * 60 * 1000)
-        if (notification15min > 0) {
-          const timeout15 = setTimeout(() => {
-            sendNotification({
-              title: 'Match Starting Soon!',
-              body: `${fixture.team_h_short_name} vs ${fixture.team_a_short_name} kicks off in 15 minutes`,
-              tag: `fixture-${fixture.id}-15min`,
-              icon: '/pwa-192x192.png',
-            })
-          }, notification15min)
-          newTimeouts.add(timeout15)
+      fixtures.forEach(fixture => {
+        if (fixture.match_status.status !== 'scheduled') {
+          return
         }
 
-        // Notification at kickoff
-        if (timeDiff > 0) {
-          const timeoutKickoff = setTimeout(() => {
-            sendNotification({
-              title: 'Match Kicked Off!',
-              body: `${fixture.team_h_short_name} vs ${fixture.team_a_short_name} has started`,
-              tag: `fixture-${fixture.id}-kickoff`,
-              icon: '/pwa-192x192.png',
-              requireInteraction: false,
-            })
-          }, timeDiff)
-          newTimeouts.add(timeoutKickoff)
+        const kickoffTime = new Date(fixture.kickoff_time)
+        const timeDiff = kickoffTime.getTime() - now.getTime()
+
+        // Schedule notifications for fixtures within the next 24 hours
+        if (timeDiff > 0 && timeDiff <= 24 * 60 * 60 * 1000) {
+          // Notification 15 minutes before kickoff
+          const notification15min = timeDiff - (15 * 60 * 1000)
+          if (notification15min > 0) {
+            const timeout15 = setTimeout(() => {
+              sendNotification({
+                title: 'Match Starting Soon!',
+                body: `${fixture.team_h_short_name} vs ${fixture.team_a_short_name} kicks off in 15 minutes`,
+                tag: `fixture-${fixture.id}-15min`,
+                icon: '/pwa-192x192.png',
+              })
+            }, notification15min)
+            newTimeouts.add(timeout15)
+          }
+
+          // Notification at kickoff
+          if (timeDiff > 0) {
+            const timeoutKickoff = setTimeout(() => {
+              sendNotification({
+                title: 'Match Kicked Off!',
+                body: `${fixture.team_h_short_name} vs ${fixture.team_a_short_name} has started`,
+                tag: `fixture-${fixture.id}-kickoff`,
+                icon: '/pwa-192x192.png',
+                requireInteraction: false,
+              })
+            }, timeDiff)
+            newTimeouts.add(timeoutKickoff)
+          }
         }
-      }
+      })
+
+      return newTimeouts
     })
-
-    setScheduledTimeouts(newTimeouts)
-  }, [isSupported, permission, sendNotification, clearScheduledNotifications])
+  }, [isSupported, permission, sendNotification])
 
   // Cleanup on unmount
   useEffect(() => {

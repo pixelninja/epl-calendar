@@ -1,14 +1,19 @@
 import { useState, useCallback, useEffect } from 'react'
 import { DateGroup } from '@/components/DateGroup'
 import { TimezoneModal } from '@/components/TimezoneModal'
+import { NotificationsModal } from '@/components/NotificationsModal'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { FixturesLoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { useFixtures } from '@/hooks/useFixtures'
 import { useFilteredFixtures } from '@/hooks/useFilteredFixtures'
 import { useFixtureGrouping } from '@/hooks/useFixtureGrouping'
+import { useNotificationScheduler } from '@/hooks/useNotificationScheduler'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { useSettings } from '@/contexts/SettingsContext'
 import { useScreenReaderContext } from '@/contexts/ScreenReaderContext'
+import { hapticTap } from '@/utils/haptics'
 import { cn } from '@/lib/utils'
 
 function App() {
@@ -19,27 +24,61 @@ function App() {
     timeFormat,
     hidePreviousFixtures,
     favoriteTeamId,
+    notificationSettings,
     setActiveTab,
     setShowScores,
     setSelectedTimezone,
     setTimeFormat,
     setHidePreviousFixtures,
     setFavoriteTeamId,
+    setNotificationSettings,
   } = useSettings()
   
   const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
-  const { data: fixtures = [], isLoading, error } = useFixtures()
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false)
+  const { data: fixtures = [], isLoading, error, refetch } = useFixtures()
   const { announceLoading, announceError, announceSuccess } = useScreenReaderContext()
 
   // Use custom hooks for fixture processing
   const filteredFixtures = useFilteredFixtures(fixtures, hidePreviousFixtures)
   const { fixturesByDate, sortedDates, nextFixture, nextFixtureDate } = useFixtureGrouping(filteredFixtures)
   
+  // Schedule smart notifications
+  useNotificationScheduler({
+    fixtures,
+    favoriteTeamId,
+    notificationSettings,
+    timezone: selectedTimezone
+  })
+
+  // Pull to refresh functionality
+  const { containerRef, isPulling, pullDistance, isRefreshing } = usePullToRefresh({
+    onRefresh: async () => {
+      try {
+        if (refetch) {
+          await refetch()
+          announceSuccess('Fixtures refreshed')
+        }
+      } catch (error) {
+        announceError('Failed to refresh fixtures')
+        console.error('Refresh error:', error)
+      }
+    },
+    enabled: activeTab === 'fixtures' && !isLoading && !!refetch
+  })
+  
   const today = new Date().toDateString()
 
   // Memoize tab switching functions to prevent unnecessary re-renders
-  const handleFixturesTab = useCallback(() => setActiveTab('fixtures'), [setActiveTab])
-  const handleTableTab = useCallback(() => setActiveTab('table'), [setActiveTab])
+  const handleFixturesTab = useCallback(() => {
+    hapticTap()
+    setActiveTab('fixtures')
+  }, [setActiveTab])
+  
+  const handleTableTab = useCallback(() => {
+    hapticTap()
+    setActiveTab('table')
+  }, [setActiveTab])
 
   // Screen reader announcements for app state changes
   useEffect(() => {
@@ -104,7 +143,7 @@ function App() {
         showScores={showScores}
         onScoresToggleChange={setShowScores}
         onTimezoneClick={() => setIsTimezoneModalOpen(true)}
-        onNotificationsClick={() => {/* TODO: Add push notification logic */}}
+        onNotificationsClick={() => setIsNotificationsModalOpen(true)}
         hidePreviousFixtures={hidePreviousFixtures}
       />
 
@@ -149,8 +188,9 @@ function App() {
         {/* Fixtures Tab */}
         <ErrorBoundary>
           <section 
+            ref={containerRef as React.RefObject<HTMLElement>}
             className={cn(
-              "bg-background pb-14",
+              "bg-background pb-14 relative",
               activeTab === 'fixtures' ? 'block' : 'hidden'
             )}
             role="tabpanel" 
@@ -158,6 +198,30 @@ function App() {
             aria-labelledby="fixtures-tab"
             aria-hidden={activeTab !== 'fixtures'}
           >
+            {/* Pull to refresh indicator */}
+            {(isPulling || isRefreshing) && (
+              <div 
+                className="absolute top-0 left-0 right-0 flex items-center justify-center bg-primary/10 transition-all duration-200"
+                style={{ 
+                  height: `${Math.max(pullDistance, isRefreshing ? 60 : 0)}px`,
+                  transform: `translateY(-${Math.max(pullDistance, isRefreshing ? 60 : 0)}px)`
+                }}
+              >
+                <div className="flex items-center gap-2 text-primary">
+                  {isRefreshing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm font-medium">Refreshing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-4 h-4 border-2 border-primary rounded-full opacity-60" />
+                      <span className="text-sm font-medium opacity-60">Pull to refresh</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             {sortedDates.length > 0 ? (
               sortedDates.map((date, index) => {
                 const dateFixtures = fixturesByDate[date]
@@ -223,6 +287,16 @@ function App() {
         favoriteTeamId={favoriteTeamId}
         onFavoriteTeamChange={setFavoriteTeamId}
       />
+      
+      <NotificationsModal
+        isOpen={isNotificationsModalOpen}
+        onClose={() => setIsNotificationsModalOpen(false)}
+        notificationSettings={notificationSettings}
+        onNotificationSettingsChange={setNotificationSettings}
+      />
+
+      {/* PWA Install Prompt - automatically handles its own visibility */}
+      <PWAInstallPrompt />
     </div>
   )
 }

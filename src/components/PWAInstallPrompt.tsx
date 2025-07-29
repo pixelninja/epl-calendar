@@ -1,254 +1,215 @@
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Smartphone, Download, X, CheckCircle } from '@/components/icons'
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import { X, Download, Smartphone, CheckCircle } from '@/components/icons'
+import { usePWAInstall } from '@/hooks/usePWAInstall'
+import { cn } from '@/lib/utils'
 
 interface PWAInstallPromptProps {
-  isOpen: boolean
-  onClose: () => void
+  className?: string
 }
 
-export function PWAInstallPrompt({ isOpen, onClose }: PWAInstallPromptProps) {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
+  const {
+    isInstallable,
+    isInstalled,
+    canShowPrompt,
+    showInstallPrompt,
+    dismissPrompt,
+    isIOS,
+    isStandalone
+  } = usePWAInstall()
+  
+  const [showDialog, setShowDialog] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
-  const [isInstalled, setIsInstalled] = useState(false)
 
+  // Show dialog after user has interacted with the app (to avoid immediate popup)
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+    if (isInstallable && canShowPrompt && hasInteracted && !showDialog) {
+      // Delay showing dialog to avoid interrupting user flow
+      const timer = setTimeout(() => {
+        setShowDialog(true)
+      }, 3000) // Show after 3 seconds of interaction
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isInstallable, canShowPrompt, hasInteracted, showDialog])
+
+  // Track user interaction to show prompt at appropriate time
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      setHasInteracted(true)
     }
 
-    const handleAppInstalled = () => {
-      setIsInstalled(true)
-      setDeferredPrompt(null)
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
+    // Listen for any user interaction
+    const events = ['click', 'scroll', 'touchstart', 'keydown']
+    events.forEach(event => {
+      window.addEventListener(event, handleUserInteraction, { once: true })
+    })
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
+      events.forEach(event => {
+        window.removeEventListener(event, handleUserInteraction)
+      })
     }
   }, [])
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return
+    if (isIOS) {
+      // For iOS, just show the dialog with instructions
+      return
+    }
 
     setIsInstalling(true)
+    const success = await showInstallPrompt()
+    setIsInstalling(false)
     
-    try {
-      await deferredPrompt.prompt()
-      const choiceResult = await deferredPrompt.userChoice
-      
-      if (choiceResult.outcome === 'accepted') {
-        setIsInstalled(true)
-      }
-    } catch (error) {
-      console.error('Error during PWA installation:', error)
-    } finally {
-      setIsInstalling(false)
-      setDeferredPrompt(null)
+    if (success) {
+      setShowDialog(false)
+      setShowSuccess(true)
+      // Hide success message after 3 seconds
+      setTimeout(() => setShowSuccess(false), 3000)
+    } else {
+      setShowDialog(false)
     }
   }
 
-  const getManualInstructions = () => {
-    const userAgent = navigator.userAgent.toLowerCase()
-    
-    if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
-      return {
-        browser: 'Chrome',
-        steps: [
-          'Tap the menu button (⋮) in the top right corner',
-          'Select "Add to Home Screen" or "Install app"',
-          'Tap "Add" to confirm'
-        ]
-      }
-    }
-    
-    if (userAgent.includes('safari') && !userAgent.includes('chrome')) {
-      return {
-        browser: 'Safari',
-        steps: [
-          'Tap the share button (□↗) at the bottom of the screen',
-          'Scroll down and tap "Add to Home Screen"',
-          'Tap "Add" to confirm'
-        ]
-      }
-    }
-    
-    if (userAgent.includes('firefox')) {
-      return {
-        browser: 'Firefox',
-        steps: [
-          'Tap the menu button (⋮) in the top right corner',
-          'Select "Install" or "Add to Home Screen"',
-          'Tap "Add" to confirm'
-        ]
-      }
-    }
-    
-    return {
-      browser: 'your browser',
-      steps: [
-        'Look for an "Install" or "Add to Home Screen" option in your browser menu',
-        'Follow the prompts to add the app to your device'
-      ]
-    }
+  const handleDismiss = () => {
+    dismissPrompt()
+    setShowDialog(false)
   }
 
-  const instructions = getManualInstructions()
+  // Don't render if already installed or can't show prompt
+  if (isInstalled || isStandalone || !canShowPrompt) {
+    return null
+  }
 
-  if (isInstalled) {
+  // Success message after installation
+  if (showSuccess) {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-6 w-6 text-success" />
-              <DialogTitle>App Installed Successfully!</DialogTitle>
-            </div>
-            <DialogDescription>
-              EPL Calendar has been added to your home screen. You can now use it like a native app!
-            </DialogDescription>
-          </DialogHeader>
-          
-          <DialogFooter>
-            <Button onClick={onClose} className="w-full">
-              Great!
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <div className={cn(
+        "fixed bottom-4 left-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg z-50 animate-in slide-in-from-bottom-2",
+        className
+      )}>
+        <div className="flex items-center gap-3">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-green-800">App Installed Successfully!</p>
+            <p className="text-xs text-green-600">You can now access EPL Calendar from your home screen</p>
+          </div>
+        </div>
+      </div>
     )
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <Download className="h-6 w-6 text-primary" />
-            <DialogTitle>Install EPL Calendar</DialogTitle>
-          </div>
-          <DialogDescription>
-            Get the full app experience with offline access and push notifications.
-          </DialogDescription>
-        </DialogHeader>
+  // Install prompt dialog
+  if (showDialog) {
+    return (
+      <>
+        {/* Backdrop */}
+        <div className="fixed inset-0 bg-black/50 z-50" onClick={handleDismiss} />
         
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <Card className="p-3">
-              <CardContent className="p-0">
-                <Smartphone className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-xs text-muted-foreground">Native app feel</p>
-              </CardContent>
-            </Card>
-            <Card className="p-3">
-              <CardContent className="p-0">
-                <Download className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-xs text-muted-foreground">Offline access</p>
-              </CardContent>
-            </Card>
-            <Card className="p-3">
-              <CardContent className="p-0">
-                <CheckCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-xs text-muted-foreground">Fast loading</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {deferredPrompt ? (
-            <Button 
-              onClick={handleInstall} 
-              disabled={isInstalling}
-              className="w-full"
-              size="lg"
-            >
-              {isInstalling ? (
-                <>Installing...</>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Install App
-                </>
-              )}
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">To install in {instructions.browser}:</p>
-              <ol className="space-y-1 text-sm text-muted-foreground">
-                {instructions.steps.map((step, index) => (
-                  <li key={index} className="flex gap-2">
-                    <span className="font-medium text-primary">{index + 1}.</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
+        {/* Dialog */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-lg animate-in slide-in-from-bottom-4">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">Install EPL Calendar</h2>
             </div>
-          )}
-        </div>
-        
-        <DialogFooter className="flex-row gap-2">
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            <X className="h-4 w-4 mr-2" />
-            Maybe Later
-          </Button>
-          {!deferredPrompt && (
-            <Button onClick={onClose} className="flex-1">
-              Got It
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleDismiss}
+              className="p-2"
+            >
+              <X className="h-5 w-5" />
             </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// Hook to manage PWA install prompt
-export function usePWAInstall() {
-  const [showPrompt, setShowPrompt] = useState(false)
-  const [canInstall, setCanInstall] = useState(false)
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
-      setCanInstall(true)
-    }
-
-    const handleAppInstalled = () => {
-      setCanInstall(false)
-      setShowPrompt(false)
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
-    }
-  }, [])
-
-  const promptInstall = () => {
-    setShowPrompt(true)
+          </div>
+          
+          {/* Content */}
+          <div className="p-6 space-y-4">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Add EPL Calendar to your home screen for quick access to fixtures, scores, and notifications.
+              </p>
+              
+              {/* Benefits */}
+              <div className="grid grid-cols-3 gap-4 text-center py-4">
+                <div>
+                  <Smartphone className="h-6 w-6 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Native feel</p>
+                </div>
+                <div>
+                  <Download className="h-6 w-6 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Offline access</p>
+                </div>
+                <div>
+                  <CheckCircle className="h-6 w-6 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Fast loading</p>
+                </div>
+              </div>
+              
+              {isIOS && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left space-y-2">
+                  <p className="text-sm font-medium text-blue-800">To install on iOS:</p>
+                  <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                    <li>Tap the Share button in Safari</li>
+                    <li>Scroll down and tap "Add to Home Screen"</li>
+                    <li>Tap "Add" to confirm</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="p-6 border-t border-border space-y-3">
+            {!isIOS && (
+              <Button 
+                onClick={handleInstall}
+                disabled={isInstalling}
+                className="w-full py-3 text-base font-medium bg-primary text-white"
+              >
+                {isInstalling ? (
+                  <>Installing...</>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Install App
+                  </>
+                )}
+              </Button>
+            )}
+            
+            <Button 
+              variant="ghost" 
+              onClick={handleDismiss}
+              className="w-full py-3 text-base"
+            >
+              Maybe Later
+            </Button>
+          </div>
+        </div>
+      </>
+    )
   }
 
-  const closePrompt = () => {
-    setShowPrompt(false)
+  // Compact install button (shown in header when installable)
+  if (isInstallable && canShowPrompt && hasInteracted) {
+    return (
+      <Button
+        onClick={() => setShowDialog(true)}
+        variant="ghost"
+        size="sm"
+        className={cn("flex items-center gap-2 text-sm", className)}
+      >
+        <Download className="h-4 w-4" />
+        <span className="hidden sm:inline">Install</span>
+      </Button>
+    )
   }
 
-  return {
-    showPrompt,
-    canInstall,
-    promptInstall,
-    closePrompt,
-  }
+  return null
 }

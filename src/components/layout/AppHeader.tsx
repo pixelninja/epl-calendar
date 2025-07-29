@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { Bell, Globe } from '@/components/icons'
 
 interface AppHeaderProps {
@@ -52,6 +53,8 @@ export function AppHeader({
           {showControls && (
             <div className="flex flex-col items-end justify-between mt-2">
               <div className="flex items-center gap-4">
+                <PWAInstallPrompt className="text-white hover:bg-white/10 p-2" />
+                
                 <Button 
                   variant="ghost" 
                   size="sm"

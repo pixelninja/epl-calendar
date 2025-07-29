@@ -3,6 +3,15 @@ import type { ReactNode } from 'react'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { getUserTimezone } from '@/utils/timezone'
 
+export interface NotificationSettings {
+  dailyReminders: boolean
+  tomorrowGamesTime: string // "20:00"
+  todayGamesTime: string // "09:00"
+  favoriteTeamReminders: boolean
+  advanceNotice: 'day-before' | 'same-day' | 'both'
+  kickoffReminders: boolean
+}
+
 interface SettingsContextType {
   // Settings state
   activeTab: 'fixtures' | 'table'
@@ -11,6 +20,7 @@ interface SettingsContextType {
   timeFormat: '12h' | '24h'
   hidePreviousFixtures: boolean
   favoriteTeamId: number | null
+  notificationSettings: NotificationSettings
   
   // Settings setters
   setActiveTab: (tab: 'fixtures' | 'table') => void
@@ -19,12 +29,22 @@ interface SettingsContextType {
   setTimeFormat: (format: '12h' | '24h') => void
   setHidePreviousFixtures: (hide: boolean) => void
   setFavoriteTeamId: (teamId: number | null) => void
+  setNotificationSettings: (settings: NotificationSettings) => void
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
 
 interface SettingsProviderProps {
   children: ReactNode
+}
+
+const defaultNotificationSettings: NotificationSettings = {
+  dailyReminders: true,
+  tomorrowGamesTime: '20:00',
+  todayGamesTime: '09:00',
+  favoriteTeamReminders: true,
+  advanceNotice: 'both',
+  kickoffReminders: true
 }
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
@@ -34,6 +54,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const [timeFormat, setTimeFormat] = useLocalStorage<'12h' | '24h'>('epl-calendar-time-format', '24h')
   const [hidePreviousFixtures, setHidePreviousFixtures] = useLocalStorage<boolean>('epl-calendar-hide-previous', false)
   const [favoriteTeamId, setFavoriteTeamId] = useLocalStorage<number | null>('epl-calendar-favorite-team', null)
+  const [notificationSettings, setNotificationSettings] = useLocalStorage<NotificationSettings>('epl-calendar-notifications', defaultNotificationSettings)
 
   return (
     <SettingsContext.Provider
@@ -44,12 +65,14 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         timeFormat,
         hidePreviousFixtures,
         favoriteTeamId,
+        notificationSettings,
         setActiveTab,
         setShowScores,
         setSelectedTimezone,
         setTimeFormat,
         setHidePreviousFixtures,
         setFavoriteTeamId,
+        setNotificationSettings,
       }}
     >
       {children}
