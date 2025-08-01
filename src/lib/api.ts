@@ -20,24 +20,50 @@ export class FPLApiError extends Error {
   }
 }
 
+interface CacheEntry {
+  data: unknown
+  timestamp: number
+  etag?: string
+  lastModified?: string
+}
+
 class FPLApiService {
-  private cache = new Map<string, { data: unknown; timestamp: number }>()
+  private cache = new Map<string, CacheEntry>()
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
   private async fetchWithRetry<T>(
     endpoint: string,
     retries = 3,
     delay = 1000
-  ): Promise<T> {
+  ): Promise<{ data: T; etag?: string; lastModified?: string }> {
     const url = `${FPL_BASE_URL}${endpoint}`
+    const cached = this.cache.get(endpoint)
+    
+    // Prepare conditional request headers
+    const headers: Record<string, string> = {
+      'User-Agent': 'EPL Calendar PWA',
+    }
+    
+    if (cached?.etag) {
+      headers['If-None-Match'] = cached.etag
+    }
+    
+    if (cached?.lastModified) {
+      headers['If-Modified-Since'] = cached.lastModified
+    }
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const response = await fetch(url, {
-          headers: {
-            'User-Agent': 'EPL Calendar PWA',
-          },
-        })
+        const response = await fetch(url, { headers })
+
+        // Handle 304 Not Modified - data hasn't changed
+        if (response.status === 304 && cached) {
+          return {
+            data: cached.data as T,
+            etag: cached.etag,
+            lastModified: cached.lastModified
+          }
+        }
 
         if (!response.ok) {
           throw new FPLApiError(
@@ -48,7 +74,10 @@ class FPLApiService {
         }
 
         const data = await response.json()
-        return data
+        const etag = response.headers.get('etag') || undefined
+        const lastModified = response.headers.get('last-modified') || undefined
+        
+        return { data, etag, lastModified }
       } catch (error) {
         if (attempt === retries) {
           if (error instanceof FPLApiError) {
@@ -77,8 +106,13 @@ class FPLApiService {
     return null
   }
 
-  private setCachedData<T>(key: string, data: T): void {
-    this.cache.set(key, { data, timestamp: Date.now() })
+  private setCachedData<T>(key: string, data: T, etag?: string, lastModified?: string): void {
+    this.cache.set(key, { 
+      data, 
+      timestamp: Date.now(),
+      etag,
+      lastModified
+    })
   }
 
   async getBootstrapStatic(): Promise<BootstrapStatic> {
@@ -97,9 +131,9 @@ class FPLApiService {
 
     try {
       // Production: Try real API first
-      const data = await this.fetchWithRetry<BootstrapStatic>('/bootstrap-static/')
-      this.setCachedData(cacheKey, data)
-      return data
+      const result = await this.fetchWithRetry<BootstrapStatic>('/bootstrap-static/')
+      this.setCachedData(cacheKey, result.data, result.etag, result.lastModified)
+      return result.data
     } catch (error) {
       // Fallback to local data if API fails
       console.warn('API failed, falling back to local data:', error)
@@ -123,9 +157,9 @@ class FPLApiService {
 
     try {
       // Production: Try real API first
-      const data = await this.fetchWithRetry<Fixture[]>('/fixtures/')
-      this.setCachedData(cacheKey, data)
-      return data
+      const result = await this.fetchWithRetry<Fixture[]>('/fixtures/')
+      this.setCachedData(cacheKey, result.data, result.etag, result.lastModified)
+      return result.data
     } catch (error) {
       // Fallback to local data if API fails
       console.warn('API failed, falling back to local data:', error)
@@ -141,9 +175,9 @@ class FPLApiService {
       return cached
     }
 
-    const data = await this.fetchWithRetry<Fixture[]>(`/fixtures/?event=${gameweek}`)
-    this.setCachedData(cacheKey, data)
-    return data
+    const result = await this.fetchWithRetry<Fixture[]>(`/fixtures/?event=${gameweek}`)
+    this.setCachedData(cacheKey, result.data, result.etag, result.lastModified)
+    return result.data
   }
 
   async getTeams(): Promise<Team[]> {
