@@ -23,9 +23,9 @@ export function TeamCrest({
   const [imageError, setImageError] = useState(false)
   
   const sizeClasses = {
-    sm: 'w-4 h-4 text-[8px]',
-    md: 'w-6 h-6 text-[10px]',
-    lg: 'w-8 h-8 text-xs'
+    sm: 'w-3 h-3 text-[6px]',
+    md: 'w-4 h-4 text-[8px]',
+    lg: 'w-6 h-6 text-[10px]'
   }
   
   const logoUrl = getTeamLogoUrl(teamFullName)

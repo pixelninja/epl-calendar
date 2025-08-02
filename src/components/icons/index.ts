@@ -36,4 +36,5 @@ export {
   Search,
   Check,
   ChevronsUpDown,
+  ExternalLink,
 } from 'lucide-react'

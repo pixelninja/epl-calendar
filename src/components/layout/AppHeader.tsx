@@ -1,7 +1,9 @@
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { BulkCalendarButton } from '@/components/BulkCalendarButton'
 import { usePWAInstallContext } from '@/contexts/PWAInstallContext'
-import { Bell, Globe, Download } from '@/components/icons'
+import { Globe, Download } from '@/components/icons'
+import type { ProcessedFixture } from '@/types/api'
 
 interface AppHeaderProps {
   /** Current state of the application */
@@ -14,10 +16,14 @@ interface AppHeaderProps {
   onScoresToggleChange?: (checked: boolean) => void
   /** Handler for timezone modal open */
   onTimezoneClick?: () => void
-  /** Handler for notifications click */
-  onNotificationsClick?: () => void
   /** Whether to hide previous fixtures (affects scores toggle visibility) */
   hidePreviousFixtures?: boolean
+  /** Fixtures data for bulk calendar operations */
+  fixtures?: ProcessedFixture[]
+  /** User's selected timezone */
+  timezone?: string
+  /** User's favorite team ID */
+  favoriteTeamId?: number | null
 }
 
 export function AppHeader({
@@ -26,8 +32,10 @@ export function AppHeader({
   showScores = false,
   onScoresToggleChange,
   onTimezoneClick,
-  onNotificationsClick,
-  hidePreviousFixtures = false
+  hidePreviousFixtures = false,
+  fixtures = [],
+  timezone = 'UTC',
+  favoriteTeamId
 }: AppHeaderProps) {
   const showControls = state === 'normal'
   const shouldShowScoresToggle = showScoresToggle && !hidePreviousFixtures && showControls
@@ -68,6 +76,22 @@ export function AppHeader({
                   </Button>
                 )}
                 
+                {fixtures.length > 0 && (
+                  <div className="text-white [&_button]:!text-white [&_button:hover]:!bg-white/10">
+                    <BulkCalendarButton
+                      fixtures={fixtures}
+                      timezone={timezone}
+                      favoriteTeamId={favoriteTeamId}
+                      showDateOption={false} // Don't show date-specific options in global header
+                      showFavoriteTeamOption={true}
+                      showAllRemainingOption={true}
+                      size="sm"
+                      variant="ghost"
+                      className="p-2"
+                    />
+                  </div>
+                )}
+                
                 <Button 
                   variant="ghost" 
                   size="sm"
@@ -78,15 +102,6 @@ export function AppHeader({
                   <Globe className="h-5 w-5" />
                 </Button>
                 
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="p-2 text-white hover:bg-white/10"
-                  onClick={onNotificationsClick}
-                  aria-label="Notification settings"
-                >
-                  <Bell className="h-5 w-5" />
-                </Button>
               </div>
               
               {/* Scores Toggle - conditionally rendered */}

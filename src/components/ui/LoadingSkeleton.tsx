@@ -26,7 +26,7 @@ export function FixtureRowSkeleton() {
     <div className="flex items-center py-4 px-4 border-b border-border/20">
       {/* Home Team */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="w-4 h-4 rounded-full" />
         <Skeleton className="h-4 w-24" />
       </div>
       
@@ -38,7 +38,7 @@ export function FixtureRowSkeleton() {
       {/* Away Team */}
       <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
         <Skeleton className="h-4 w-24" />
-        <Skeleton className="w-6 h-6 rounded-full" />
+        <Skeleton className="w-4 h-4 rounded-full" />
       </div>
     </div>
   )

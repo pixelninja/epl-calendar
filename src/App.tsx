@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { DateGroup } from '@/components/DateGroup'
 import { TimezoneModal } from '@/components/TimezoneModal'
-import { NotificationsModal } from '@/components/NotificationsModal'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { AppFooter } from '@/components/AppFooter'
@@ -10,7 +9,6 @@ import { FixturesLoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { useFixtures } from '@/hooks/useFixtures'
 import { useFilteredFixtures } from '@/hooks/useFilteredFixtures'
 import { useFixtureGrouping } from '@/hooks/useFixtureGrouping'
-import { useNotificationScheduler } from '@/hooks/useNotificationScheduler'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { useSettings } from '@/contexts/SettingsContext'
 import { useScreenReaderContext } from '@/contexts/ScreenReaderContext'
@@ -25,18 +23,15 @@ function App() {
     timeFormat,
     hidePreviousFixtures,
     favoriteTeamId,
-    notificationSettings,
     setActiveTab,
     setShowScores,
     setSelectedTimezone,
     setTimeFormat,
     setHidePreviousFixtures,
     setFavoriteTeamId,
-    setNotificationSettings,
   } = useSettings()
   
   const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
-  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false)
   const { data: fixtures = [], isLoading, error, refetch } = useFixtures()
   const { announceLoading, announceError, announceSuccess } = useScreenReaderContext()
 
@@ -44,13 +39,6 @@ function App() {
   const filteredFixtures = useFilteredFixtures(fixtures, hidePreviousFixtures)
   const { fixturesByDate, sortedDates, nextFixture, nextFixtureDate } = useFixtureGrouping(filteredFixtures)
   
-  // Schedule smart notifications
-  useNotificationScheduler({
-    fixtures,
-    favoriteTeamId,
-    notificationSettings,
-    timezone: selectedTimezone
-  })
 
   // Pull to refresh functionality
   const { containerRef, isPulling, pullDistance, isRefreshing } = usePullToRefresh({
@@ -147,8 +135,10 @@ function App() {
         showScores={showScores}
         onScoresToggleChange={setShowScores}
         onTimezoneClick={() => setIsTimezoneModalOpen(true)}
-        onNotificationsClick={() => setIsNotificationsModalOpen(true)}
         hidePreviousFixtures={hidePreviousFixtures}
+        fixtures={fixtures}
+        timezone={selectedTimezone}
+        favoriteTeamId={favoriteTeamId}
       />
 
       {/* Navigation Bar */}
@@ -247,6 +237,7 @@ function App() {
                       nextFixtureId={nextFixture?.id}
                       isEvenRow={index % 2 === 0}
                       favoriteTeamId={favoriteTeamId}
+                      allFixtures={fixtures}
                     />
                   </ErrorBoundary>
                 )
@@ -292,12 +283,6 @@ function App() {
         onFavoriteTeamChange={setFavoriteTeamId}
       />
       
-      <NotificationsModal
-        isOpen={isNotificationsModalOpen}
-        onClose={() => setIsNotificationsModalOpen(false)}
-        notificationSettings={notificationSettings}
-        onNotificationSettingsChange={setNotificationSettings}
-      />
 
       {/* PWA Install Prompt - automatically handles its own visibility */}
       <PWAInstallPrompt />

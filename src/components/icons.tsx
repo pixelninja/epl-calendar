@@ -29,5 +29,11 @@ export {
   // Device & Installation
   Smartphone,
   Download,
-  CheckCircle
+  CheckCircle,
+  
+  // Calendar & Time
+  Calendar,
+  
+  // External Links
+  ExternalLink
 } from 'lucide-react'
